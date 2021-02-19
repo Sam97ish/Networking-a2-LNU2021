@@ -12,8 +12,7 @@ import java.nio.charset.StandardCharsets;
 public class TCPEchoServer extends Networking{
     public static String MYDIR;
     public static int MYPORT = 8080;
-    private HttpMessage httpMsg; //to store http message components and to parse.
-    private HttpResponses httpRsp; //to store response part and construct it.
+
 
     /**
      * Constructor
@@ -22,8 +21,7 @@ public class TCPEchoServer extends Networking{
      */
     public TCPEchoServer(String ip, int port) {
         super(ip, port);
-        httpMsg = new HttpMessage();
-        httpRsp = new HttpResponses();
+
     }
 
     /**
@@ -61,8 +59,12 @@ public class TCPEchoServer extends Networking{
      */
     class Handler implements Runnable{
         private Socket client;
+        public HttpMessage httpMsg; //to store http message components and to parse.
+        public HttpResponses httpRsp; //to store response part and construct it.
 
         public Handler(Socket c){
+            httpMsg = new HttpMessage();
+            httpRsp = new HttpResponses();
             client = c;
         }
 
@@ -80,20 +82,20 @@ public class TCPEchoServer extends Networking{
 
                     //string received.
                     String receivedRequest = new String(buf,0,bytesRead);
-                    System.out.println(receivedRequest);
+                    System.out.println("The full received request is: \n" + receivedRequest);
 
                     //TODO: parse the receivedRequest and determine what is wanted.
 
-                    //HTTPrequestParser(receivedRequest);
+                    HTTPrequestParser(receivedRequest, httpMsg);
 
                     //TODO: Create response message and send it back to the client.
 
-                    //String responseMessage = HTTPresponseCreator();
+                    String responseMessage = HTTPresponseCreator(httpMsg, httpRsp);
 
 
                     //Sending received message
                     OutputStream output = client.getOutputStream();
-                    //output.write(responseMessage.getBytes(),0,responseMessage.length());
+                    output.write(responseMessage.getBytes(),0,responseMessage.length());
                     output.flush();
 
                     //System.out.printf("TCP echo request from %s", client.getInetAddress().getHostAddress());
@@ -106,6 +108,7 @@ public class TCPEchoServer extends Networking{
                 System.exit(3);
             }catch(Exception e){
                 System.err.println("Connection was lost");
+                e.printStackTrace();
             }
 
 
@@ -139,20 +142,57 @@ public class TCPEchoServer extends Networking{
 
     }
 
-    public void HTTPrequestParser(String receivedRequest){
+    public void HTTPrequestParser(String receivedRequest, HttpMessage msg){
         //TODO: extract the request parts here.
-        //save the parts inside httpMsg
 
+        try {
+            msg.httpParser(receivedRequest);
+        } catch (HttpMessage.HttpFormatException e) {
+            System.err.println("Could not parse request!\n");
+            e.printStackTrace();
+        } catch (IOException e) {
+            System.err.println("Could not parse request!\n");
+            e.printStackTrace();
+        }
 
+        /*
+
+        //printing parsed message.
+        System.out.println("The request line is:\n" + msg.getRequestLine());
+        System.out.println("The HTTP Method is: \n" + msg.getHttpMethod());
+        System.out.println("The file wanted is:\n " + msg.getFile());
+        System.out.println("HTTP version is:\n " + msg.getHttpVersion());
+        System.out.println("The headers are:\n " + msg.getRequestHeaders().keySet().toString());
+        System.out.println("The body is:\n" + msg.getRequestBody());
+
+         */
 
     }
 
-    public String HTTPresponseCreator(){
+    public String HTTPresponseCreator(HttpMessage request, HttpResponses rsp){
         //TODO:create response here.
+        //WARNING, HTTPrequestParser must have been executed before this.
+        String response = null;
 
-        //use httpRsp to create the response.
-        String resp = httpRsp.ConstructResponse();
+        switch (request.getHttpMethod()) {
+            case "GET":
+                //System.out.println("Inside switch statement.");
+                try {
+                    response = rsp.GETresponse(request);
+                } catch (FileNotFoundException e) {
+                    response = rsp.ERRORresponse();
+                    e.printStackTrace();
+                }
+                break;
+            case "POST":
+                response = rsp.POSTresponse();
+                break;
+            default:
+                //Respond with an error response.
+                response = rsp.ERRORresponse();
+                break;
+        }
 
-        return resp;
+        return response;
     }
 }
