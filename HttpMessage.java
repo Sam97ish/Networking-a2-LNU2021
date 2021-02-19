@@ -1,23 +1,32 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.StringReader;
+import java.util.Hashtable;
+
 public class HttpMessage {
-    private String request;
+    private String requestLine;
+    private String HttpMethod;
     private String file;
-    private String host;
-    private String from;
-    private String accept;
-    private String userAgent;
-    private String acceptLanguage;
+    private String HttpVersion;
+    private Hashtable<String, String> requestHeaders;
+    private String requestBody;
+
 
     public HttpMessage(){
-
+        requestHeaders = new Hashtable<>();
     }
 
 
-    public String getRequest() {
-        return request;
+    public String getRequestLine() {
+        return requestLine;
     }
 
-    public void setRequest(String request) {
-        this.request = request;
+    public String getHttpMethod() {
+        return HttpMethod;
+    }
+
+    public void setHttpMethod(String httpMethod) {
+        HttpMethod = httpMethod;
     }
 
     public String getFile() {
@@ -28,47 +37,79 @@ public class HttpMessage {
         this.file = file;
     }
 
-    public String getHost() {
-        return host;
+    public String getHttpVersion() {
+        return HttpVersion;
     }
 
-    public void setHost(String host) {
-        this.host = host;
+    public void setHttpVersion(String httpVersion) {
+        HttpVersion = httpVersion;
     }
 
-    public String getFrom() {
-        return from;
+    public void setRequestLine(String requestLine) {
+        this.requestLine = requestLine;
     }
 
-    public void setFrom(String from) {
-        this.from = from;
+    public Hashtable<String, String> getRequestHeaders() {
+        return requestHeaders;
     }
 
-    public String getAccept() {
-        return accept;
+    public void setRequestHeaders(Hashtable<String, String> requestHeaders) {
+        this.requestHeaders = requestHeaders;
     }
 
-    public void setAccept(String accept) {
-        this.accept = accept;
+    public String getRequestBody() {
+        return requestBody;
     }
 
-    public String getUserAgent() {
-        return userAgent;
+    public void setRequestBody(String requestBody) {
+        this.requestBody = requestBody;
     }
 
-    public void setUserAgent(String userAgent) {
-        this.userAgent = userAgent;
+    private void appendHeader(String header) throws HttpFormatException {
+
+        int index = header.indexOf(":");
+        if (index == -1) {
+            throw new HttpFormatException("Invalid Header: " + header);
+        }
+        //System.out.println(header);
+        String headerKey = header.substring(0, index);
+        String headerValue = header.substring(index + 1, header.length());
+        //System.out.println(headerKey +", "+ headerValue);
+
+        requestHeaders.put(headerKey, headerValue);
+    }
+    private void appendBody(String bodyln){
+        requestBody = requestBody + bodyln + "\r\n";
     }
 
-    public String getAcceptLanguage() {
-        return acceptLanguage;
+    public void httpParser(String msg) throws IOException, HttpFormatException {
+        BufferedReader reader = new BufferedReader(new StringReader(msg));
+
+        setRequestLine(reader.readLine());
+        int index = requestLine.indexOf(" ");
+        HttpMethod = requestLine.substring(0,index);
+        int indexVersion = requestLine.indexOf(" ",index+1);
+        file = requestLine.substring(index+1, indexVersion).trim();
+        HttpVersion = requestLine.substring(indexVersion+1,requestLine.length()).trim();
+
+        String header = reader.readLine();
+        while (header.length() > 0) {
+            appendHeader(header);
+            header = reader.readLine();
+        }
+
+        String bodyLine = reader.readLine();
+        while (bodyLine != null) {
+            appendBody(bodyLine);
+            bodyLine = reader.readLine();
+        }
     }
 
-    public void setAcceptLanguage(String acceptLanguage) {
-        this.acceptLanguage = acceptLanguage;
-    }
 
-    public void httpParser(String msg){
+    public static class HttpFormatException extends Exception {
 
+        public HttpFormatException(String message) {
+            super(message);
+        }
     }
 }
