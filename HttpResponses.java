@@ -54,7 +54,6 @@ public class HttpResponses {
 
 
     public String GETresponse(HttpMessage request) throws FileNotFoundException {
-        //TODO: construct response here.
 
         //File here = new File(".");
         //System.out.println(here.getAbsolutePath());

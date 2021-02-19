@@ -170,8 +170,8 @@ public class TCPEchoServer extends Networking{
     }
 
     public String HTTPresponseCreator(HttpMessage request, HttpResponses rsp){
-        //TODO:create response here.
         //WARNING, HTTPrequestParser must have been executed before this.
+
         String response = null;
 
         switch (request.getHttpMethod()) {
@@ -185,10 +185,12 @@ public class TCPEchoServer extends Networking{
                 }
                 break;
             case "POST":
+                //TODO: implement this.
                 response = rsp.POSTresponse();
                 break;
             default:
                 //Respond with an error response.
+                //TODO: implement this.
                 response = rsp.ERRORresponse();
                 break;
         }
