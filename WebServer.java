@@ -9,7 +9,7 @@ import java.net.*;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 
-public class TCPEchoServer extends Networking{
+public class WebServer extends Networking{
     public static String MYDIR;
     public static int MYPORT = 8080;
 
@@ -19,7 +19,7 @@ public class TCPEchoServer extends Networking{
      * @param ip : provided ip in the arguments.
      * @param port : provided port in the arguments.
      */
-    public TCPEchoServer(String ip, int port) {
+    public WebServer(String ip, int port) {
         super(ip, port);
 
     }
@@ -82,7 +82,8 @@ public class TCPEchoServer extends Networking{
 
                     //string received.
                     String receivedRequest = new String(buf,0,bytesRead);
-                    System.out.println("The full received request is: \n" + receivedRequest);
+
+                    //System.out.println("The full received request is: \n" + receivedRequest);
 
                     //TODO: parse the receivedRequest and determine what is wanted.
 
@@ -127,10 +128,10 @@ public class TCPEchoServer extends Networking{
         MYDIR = args[1];
 
 
-        TCPEchoServer server = null;
+        WebServer server = null;
         try {
             //create new TCP server.
-            server = new TCPEchoServer(Inet4Address.getLocalHost().getHostAddress(), MYPORT);
+            server = new WebServer(Inet4Address.getLocalHost().getHostAddress(), MYPORT);
             //start listening and handling clients.
             server.contact();
         } catch (UnknownHostException e) {
@@ -155,8 +156,8 @@ public class TCPEchoServer extends Networking{
             e.printStackTrace();
         }
 
-        /*
 
+/*
         //printing parsed message.
         System.out.println("The request line is:\n" + msg.getRequestLine());
         System.out.println("The HTTP Method is: \n" + msg.getHttpMethod());
@@ -165,7 +166,8 @@ public class TCPEchoServer extends Networking{
         System.out.println("The headers are:\n " + msg.getRequestHeaders().keySet().toString());
         System.out.println("The body is:\n" + msg.getRequestBody());
 
-         */
+ */
+
 
     }
 
