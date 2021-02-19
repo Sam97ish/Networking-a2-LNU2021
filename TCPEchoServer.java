@@ -6,11 +6,14 @@
 
 import java.io.*;
 import java.net.*;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 
 public class TCPEchoServer extends Networking{
-    public static int BUFSIZE;
-    public static final int MYPORT = 4950;
+    public static String MYDIR;
+    public static int MYPORT = 8080;
+    private HttpMessage httpMsg; //to store http message components and to parse.
+    private HttpResponses httpRsp; //to store response part and construct it.
 
     /**
      * Constructor
@@ -19,6 +22,8 @@ public class TCPEchoServer extends Networking{
      */
     public TCPEchoServer(String ip, int port) {
         super(ip, port);
+        httpMsg = new HttpMessage();
+        httpRsp = new HttpResponses();
     }
 
     /**
@@ -67,23 +72,32 @@ public class TCPEchoServer extends Networking{
             try {
                 while(true) {
 
-                    byte[] buf = new byte[BUFSIZE];
+                    byte[] buf = new byte[65535]; //max tcp packet size, should be more than enough.
 
                     //input stream to receive messages.
                     InputStream input = client.getInputStream();
                     int bytesRead = input.read(buf);
 
                     //string received.
-                    String receivedMSG = new String(buf,0,bytesRead);
+                    String receivedRequest = new String(buf,0,bytesRead);
+                    System.out.println(receivedRequest);
+
+                    //TODO: parse the receivedRequest and determine what is wanted.
+
+                    //HTTPrequestParser(receivedRequest);
+
+                    //TODO: Create response message and send it back to the client.
+
+                    //String responseMessage = HTTPresponseCreator();
 
 
                     //Sending received message
                     OutputStream output = client.getOutputStream();
-                    output.write(receivedMSG.getBytes(),0,receivedMSG.length());
+                    //output.write(responseMessage.getBytes(),0,responseMessage.length());
                     output.flush();
 
-                    System.out.printf("TCP echo request from %s", client.getInetAddress().getHostAddress());
-                    System.out.printf(" using port %d\n", client.getPort());
+                    //System.out.printf("TCP echo request from %s", client.getInetAddress().getHostAddress());
+                    //System.out.printf(" using port %d\n", client.getPort());
 
                 }
             } catch (IOException e) {
@@ -92,7 +106,6 @@ public class TCPEchoServer extends Networking{
                 System.exit(3);
             }catch(Exception e){
                 System.err.println("Connection was lost");
-                System.exit(10);
             }
 
 
@@ -102,12 +115,14 @@ public class TCPEchoServer extends Networking{
     public static void main(String[] args){
 
         //checking if all arguments are met.
-        if (args.length != 1) {
-            System.err.printf("usage: %s bufferSize\n", args[1]);
+        if (args.length != 2) {
+            System.err.printf("usage: %s port /public (directory for the web server)\n", args[1]);
             System.exit(1);
         }
 
-        BUFSIZE = Integer.valueOf(args[0]);
+        MYPORT = Integer.valueOf(args[0]);
+        MYDIR = args[1];
+
 
         TCPEchoServer server = null;
         try {
@@ -122,5 +137,22 @@ public class TCPEchoServer extends Networking{
         }
 
 
+    }
+
+    public void HTTPrequestParser(String receivedRequest){
+        //TODO: extract the request parts here.
+        //save the parts inside httpMsg
+
+
+
+    }
+
+    public String HTTPresponseCreator(){
+        //TODO:create response here.
+
+        //use httpRsp to create the response.
+        String resp = httpRsp.ConstructResponse();
+
+        return resp;
     }
 }
