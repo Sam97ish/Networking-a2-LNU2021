@@ -64,6 +64,7 @@ public class HttpResponses {
         String[] GETresponseHeaders;
         GETresponseHeaders = new String[]{"StatusLine", "Date", "Content-Type", "Content-Length", "Last-Modified"};
 
+        //getting the extension of the file.
         String fileWanted = request.getFile();
         int index = fileWanted.indexOf(".");
         String ext = fileWanted.substring(index+1);
@@ -195,6 +196,8 @@ public class HttpResponses {
         while(scan.hasNextLine()){
             contents = contents + scan.nextLine() + "\r\n";
         }
+
+        scan.close();
 
         long lastMod = page.lastModified();
         int contentLenght = contents.getBytes().length;
