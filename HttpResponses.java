@@ -58,6 +58,13 @@ public class HttpResponses {
         //File here = new File(".");
         //System.out.println(here.getAbsolutePath());
 
+        //check if any file is wanted.
+        if(request.getFile().equals(" ") || request.getFile().equals("/") || request.getFile().equals("/Public") || request.getFile().equals("/Public/")){
+            request.setFile("/Public/index.html");
+        }
+
+        //System.out.println(request.getFile());
+
         File page = new File("."+request.getFile());
         Scanner scan = new Scanner(page);
 
