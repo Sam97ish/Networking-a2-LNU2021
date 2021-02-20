@@ -85,18 +85,15 @@ public class WebServer extends Networking{
 
                     //System.out.println("The full received request is: \n" + receivedRequest);
 
-                    //TODO: parse the receivedRequest and determine what is wanted.
-
                     HTTPrequestParser(receivedRequest, httpMsg);
 
-                    //TODO: Create response message and send it back to the client.
 
-                    String responseMessage = HTTPresponseCreator(httpMsg, httpRsp);
+                    byte[] responseMessage = HTTPresponseCreator(httpMsg, httpRsp);
 
 
                     //Sending received message
                     OutputStream output = client.getOutputStream();
-                    output.write(responseMessage.getBytes(),0,responseMessage.length());
+                    output.write(responseMessage,0,responseMessage.length);
                     output.flush();
 
                     //System.out.printf("TCP echo request from %s", client.getInetAddress().getHostAddress());
@@ -171,18 +168,18 @@ public class WebServer extends Networking{
 
     }
 
-    public String HTTPresponseCreator(HttpMessage request, HttpResponses rsp){
+    public byte[] HTTPresponseCreator(HttpMessage request, HttpResponses rsp){
         //WARNING, HTTPrequestParser must have been executed before this.
 
-        String response = null;
+        byte[] response = null;
 
         switch (request.getHttpMethod()) {
             case "GET":
                 //System.out.println("Inside switch statement.");
                 try {
                     response = rsp.GETresponse(request);
-                } catch (FileNotFoundException e) {
-                    response = rsp.ERRORresponse();
+                } catch (IOException e) {
+                    response = rsp.ERRORresponse(request);
                     e.printStackTrace();
                 }
                 break;
@@ -192,8 +189,7 @@ public class WebServer extends Networking{
                 break;
             default:
                 //Respond with an error response.
-                //TODO: implement this.
-                response = rsp.ERRORresponse();
+                response = rsp.ERRORresponse(request);
                 break;
         }
 
