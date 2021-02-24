@@ -74,14 +74,12 @@ public class HttpResponses {
 
 
         //Checking if any directory is specified.
-        if(request.getFile().equals("/")){
-            request.setFile(defaultDir);
-        }
+
 
         int startDir = request.getFile().indexOf("/",1);
         if(startDir == -1 && request.getFile().contains("hello.html")){//If they're looking for a redirected file.
             return ERRORresponse(request,"302"); //redirecting to the file.
-        }else if (startDir == -1){
+        }else {
             request.setFile(defaultDir+request.getFile());
         }
 
@@ -109,8 +107,8 @@ public class HttpResponses {
             case "png":
 
                 File photo = new File(here.getAbsolutePath()+request.getFile());
-                byte[] photoBytes = Files.readAllBytes(Paths.get("."+request.getFile()));
-                String typePhoto = "png";
+                byte[] photoBytes = Files.readAllBytes(Paths.get(here.getAbsolutePath()+request.getFile()));
+                String typePhoto = "image/png";
                 long lastModPhoto = photo.lastModified();
                 int contentLenghtPhoto = photoBytes.length;
 
@@ -123,8 +121,8 @@ public class HttpResponses {
                 buffPhoto.put(headPhoto); buffPhoto.put(photoBytes);
 
                 rsp = buffPhoto.array();
-
                 break;
+
             default:
                 //System.out.println(request.getFile());
 
@@ -204,7 +202,8 @@ public class HttpResponses {
 
         rsp = rsp + "\r\n";
 
-        //System.out.println(rsp);
+        System.out.println(rsp);
+        System.out.println("=======================================================================================");
 
         return rsp.getBytes();
     }

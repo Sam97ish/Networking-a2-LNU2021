@@ -97,6 +97,7 @@ public class WebServer extends Networking{
                     System.out.println("The headers are:\n " + httpMsg.getRequestHeaders().keySet().toString());
                     System.out.println("The body is:\n" + httpMsg.getRequestBody());
 
+
                     byte[] responseMessage = HTTPresponseCreator(httpMsg, httpRsp);
 
 
@@ -160,14 +161,6 @@ public class WebServer extends Networking{
             System.err.println("Could not parse request!\n");
             e.printStackTrace();
         }
-
-
-
-
-
-
-
-
     }
 
     public byte[] HTTPresponseCreator(HttpMessage request, HttpResponses rsp){
