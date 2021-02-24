@@ -8,6 +8,7 @@ import java.io.*;
 import java.net.*;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
 
 public class WebServer extends Networking{
     public static String MYDIR;
@@ -42,7 +43,8 @@ public class WebServer extends Networking{
 
                 Handler h = new Handler(s);//hand it over to client thread.
 
-                h.run();//thread starts.
+                Thread client = new Thread(h);
+                client.start();//thread starts.
             }
 
         } catch (IOException e) {
@@ -58,7 +60,7 @@ public class WebServer extends Networking{
      * @role:  A handler thread that controls the communication with a client socket through TCP.
      */
     class Handler implements Runnable{
-        private Socket client;
+        private final Socket client;
         public HttpMessage httpMsg; //to store http message components and to parse.
         public HttpResponses httpRsp; //to store response part and construct it.
 
@@ -87,6 +89,13 @@ public class WebServer extends Networking{
 
                     HTTPrequestParser(receivedRequest, httpMsg);
 
+                    //printing parsed message.
+                    System.out.println("The request line is:\n" + httpMsg.getRequestLine());
+                    System.out.println("The HTTP Method is: \n" + httpMsg.getHttpMethod());
+                    System.out.println("The file wanted is:\n " + httpMsg.getFile());
+                    System.out.println("HTTP version is:\n " + httpMsg.getHttpVersion());
+                    System.out.println("The headers are:\n " + httpMsg.getRequestHeaders().keySet().toString());
+                    System.out.println("The body is:\n" + httpMsg.getRequestBody());
 
                     byte[] responseMessage = HTTPresponseCreator(httpMsg, httpRsp);
 
@@ -141,7 +150,6 @@ public class WebServer extends Networking{
     }
 
     public void HTTPrequestParser(String receivedRequest, HttpMessage msg){
-        //TODO: extract the request parts here.
 
         try {
             msg.httpParser(receivedRequest);
@@ -154,16 +162,10 @@ public class WebServer extends Networking{
         }
 
 
-/*
-        //printing parsed message.
-        System.out.println("The request line is:\n" + msg.getRequestLine());
-        System.out.println("The HTTP Method is: \n" + msg.getHttpMethod());
-        System.out.println("The file wanted is:\n " + msg.getFile());
-        System.out.println("HTTP version is:\n " + msg.getHttpVersion());
-        System.out.println("The headers are:\n " + msg.getRequestHeaders().keySet().toString());
-        System.out.println("The body is:\n" + msg.getRequestBody());
 
- */
+
+
+
 
 
     }
@@ -177,9 +179,9 @@ public class WebServer extends Networking{
             case "GET":
                 //System.out.println("Inside switch statement.");
                 try {
-                    response = rsp.GETresponse(request);
+                    response = rsp.GETresponse(request,MYDIR);
                 } catch (IOException e) {
-                    response = rsp.ERRORresponse(request);
+                    response = rsp.ERRORresponse(request,"404");//file not found
                     e.printStackTrace();
                 }
                 break;
@@ -189,7 +191,7 @@ public class WebServer extends Networking{
                 break;
             default:
                 //Respond with an error response.
-                response = rsp.ERRORresponse(request);
+                response = rsp.ERRORresponse(request,"500");//internal error
                 break;
         }
 

@@ -2,9 +2,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -12,9 +10,19 @@ import java.util.*;
 public class HttpResponses {
     private String response;
     private Hashtable<String, String> RspHeaders;
+    public TreeSet<String> forbidden;
 
     public HttpResponses(){
+
         RspHeaders = new Hashtable<>();
+        forbidden = new TreeSet<String>();
+        forbidden.add("real.html"); //forbidden file.
+    }
+
+    public HttpResponses(TreeSet<String> forbiddenList){
+
+        RspHeaders = new Hashtable<>();
+        forbidden = forbiddenList;
     }
 
     private byte[] GETresponseConstructor(String[] headers, HttpMessage request, int conLength, long lastMod, String type){
@@ -57,12 +65,25 @@ public class HttpResponses {
     }
 
 
-    public byte[] GETresponse(HttpMessage request) throws IOException {
+    public byte[] GETresponse(HttpMessage request, String defaultDir) throws IOException {
 
-        //File here = new File(".");
+        File here = new File("");
         //System.out.println(here.getAbsolutePath());
         String[] GETresponseHeaders;
         GETresponseHeaders = new String[]{"StatusLine", "Date", "Content-Type", "Content-Length", "Last-Modified"};
+
+
+        //Checking if any directory is specified.
+        if(request.getFile().equals("/")){
+            request.setFile(defaultDir);
+        }
+
+        int startDir = request.getFile().indexOf("/",1);
+        if(startDir == -1 && request.getFile().contains("hello.html")){//If they're looking for a redirected file.
+            return ERRORresponse(request,"302"); //redirecting to the file.
+        }else if (startDir == -1){
+            request.setFile(defaultDir+request.getFile());
+        }
 
         //getting the extension of the file.
         String fileWanted = request.getFile();
@@ -70,16 +91,24 @@ public class HttpResponses {
         String ext = fileWanted.substring(index+1);
         byte[] rsp;
 
-        File dirCheck = new File("."+request.getFile());
+        File dirCheck = new File(here.getAbsolutePath()+request.getFile());
         //check if any file is wanted.
         if(dirCheck.isDirectory()){
             request.setFile(request.getFile() + "/index.html");
         }
 
+        //checking if file wanted is forbidden.
+        for(String x : forbidden){
+            //System.out.println("Here");
+            if (request.getFile().contains(x)){
+                return ERRORresponse(request,"403");
+            }
+        }
+
         switch (ext){
             case "png":
 
-                File photo = new File("."+request.getFile());
+                File photo = new File(here.getAbsolutePath()+request.getFile());
                 byte[] photoBytes = Files.readAllBytes(Paths.get("."+request.getFile()));
                 String typePhoto = "png";
                 long lastModPhoto = photo.lastModified();
@@ -99,7 +128,7 @@ public class HttpResponses {
             default:
                 //System.out.println(request.getFile());
 
-                File page = new File("."+request.getFile());
+                File page = new File(here.getAbsolutePath()+request.getFile());
                 Scanner scan = new Scanner(page);
                 String type = "text/html";
                 String contents="";
@@ -136,10 +165,10 @@ public class HttpResponses {
         return null;
     }
 
-    private byte[] ErrorConstructor(String[] headers, HttpMessage request, int conLength, long lastMod, String type){
+    private byte[] ErrorConstructor(String[] headers, HttpMessage request, int conLength, long lastMod, String type, String errorCode){
 
         //first status line.
-        RspHeaders.put(headers[0], request.getHttpVersion()+" 404 Error");
+        RspHeaders.put(headers[0], request.getHttpVersion()+" "+errorCode+ " Error");
 
         //Date header.
         Date now = new Date();
@@ -167,18 +196,38 @@ public class HttpResponses {
                 + headers[1] + ": " + RspHeaders.get(headers[1]) + "\r\n"
                 + headers[2] + ": " + RspHeaders.get(headers[2]) + "\r\n"
                 + headers[3] + ": " + RspHeaders.get(headers[3]) + "\r\n"
-                + headers[4] + ": " + RspHeaders.get(headers[4]) + "\r\n"
-                + "\r\n";
+                + headers[4] + ": " + RspHeaders.get(headers[4]) + "\r\n";
+
+        if (errorCode.equals("302")){
+            rsp = rsp + "Location: " + "memes/hello.html" + "\r\n";
+        }
+
+        rsp = rsp + "\r\n";
 
         //System.out.println(rsp);
 
         return rsp.getBytes();
     }
 
-    public byte[] ERRORresponse(HttpMessage request){
+    public byte[] ERRORresponse(HttpMessage request, String errorCode){
         String[] errorHeaders;
         errorHeaders = new String[]{"StatusLine", "Date", "Content-Type", "Content-Length", "Last-Modified"};
-        File page = new File("./public/error.html");
+        File page;
+        switch (errorCode){
+            case "500":
+                page = new File("public/errors/internalError.html");
+                break;
+            case "403":
+                page = new File("public/errors/forbidden.html");
+                break;
+            case "302":
+                page = new File("public/errors/redirect.html");
+                break;
+            default:
+                page = new File("public/errors/error.html");
+                break;
+        }
+
 
         Scanner scan = null;
         try {
@@ -202,7 +251,7 @@ public class HttpResponses {
         long lastMod = page.lastModified();
         int contentLenght = contents.getBytes().length;
 
-        byte[] head = ErrorConstructor(errorHeaders,request,contentLenght,lastMod,type);
+        byte[] head = ErrorConstructor(errorHeaders,request,contentLenght,lastMod,type,errorCode);
         byte[] body = contents.getBytes();
 
         rsp = new byte[head.length+body.length];
