@@ -103,6 +103,11 @@ public class HttpMessage {
             appendBody(bodyLine);
             bodyLine = reader.readLine();
         }
+
+        if(requestBody!=null){
+            requestBody = requestBody.replace("null","");
+        }
+
     }
 
 

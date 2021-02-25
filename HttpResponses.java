@@ -1,6 +1,4 @@
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -11,6 +9,7 @@ public class HttpResponses {
     private String response;
     private Hashtable<String, String> RspHeaders;
     public TreeSet<String> forbidden;
+    private int fname=1;
 
     public HttpResponses(){
 
@@ -157,10 +156,75 @@ public class HttpResponses {
         return rsp;
     }
 
-    public  byte[] POSTresponse(){
+    public  byte[] POSTresponse(HttpMessage request) throws IOException {
         //TODO: construct response here.
+        byte[] rsp = new byte[0];
+        String[] POSTresponseHeaders;
+        POSTresponseHeaders = new String[]{"StatusLine", "Date", "Content-Type", "Content-Length", "Last-Modified"};
 
-        return null;
+        String img = request.getRequestBody().substring(request.getRequestBody().indexOf("png")+32);
+        //System.out.println("img:" + img);
+        byte[] image = img.getBytes();
+        Files.write(new File("image.png").toPath(), image);
+
+
+        int contentLenght = image.length;
+        long lastMod = 0;
+        String type = "image/png";
+        byte[] head = GETresponseConstructor(POSTresponseHeaders,request,contentLenght,lastMod,type);
+
+        rsp = new byte[head.length+image.length];
+
+        ByteBuffer buff = ByteBuffer.wrap(rsp);
+
+        buff.put(head); buff.put(image);
+
+        rsp = buff.array();
+
+        /*
+        String imgHeader= request.getRequestHeaders().get("Content-Type");
+        int endIndex=imgHeader.indexOf(";");
+        String conType="";
+        if(endIndex!=-1) {
+            conType = imgHeader.substring(0, endIndex);
+        }
+        System.out.println(conType);
+
+        switch(conType){//handling both txt and png.
+            case "application/x-www-form-urlencoded":
+                File here = new File(".");
+                int strt=request.getRequestBody().indexOf("=");
+                String data = request.getRequestBody().substring(strt+1).replace("+"," ");
+                String template = "Your name is: ";
+                File f = new File(here.getAbsolutePath()+String.valueOf(fname)+".txt");
+
+                FileWriter w = new FileWriter(here.getAbsolutePath() + String.valueOf(fname)+".txt");
+                w.write(template+data);
+                w.close();
+
+                String fin = template+data;
+                int contentLenght = fin.getBytes().length;
+                long lastMod = f.lastModified();
+                String type = "text/html";
+                byte[] body = fin.getBytes();
+                byte[] head = GETresponseConstructor(POSTresponseHeaders,request,contentLenght,lastMod,type);
+
+                rsp = new byte[head.length+body.length];
+
+                ByteBuffer buff = ByteBuffer.wrap(rsp);
+
+                buff.put(head); buff.put(body);
+
+                rsp = buff.array();
+                break;
+
+            default: //default is text/html.
+
+                break;
+        }
+
+ */
+        return rsp;
     }
 
     private byte[] ErrorConstructor(String[] headers, HttpMessage request, int conLength, long lastMod, String type, String errorCode){
@@ -202,8 +266,8 @@ public class HttpResponses {
 
         rsp = rsp + "\r\n";
 
-        System.out.println(rsp);
-        System.out.println("=======================================================================================");
+        //System.out.println(rsp);
+        //System.out.println("=======================================================================================");
 
         return rsp.getBytes();
     }

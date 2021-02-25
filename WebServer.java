@@ -76,7 +76,7 @@ public class WebServer extends Networking{
             try {
                 while(true) {
 
-                    byte[] buf = new byte[65535]; //max tcp packet size, should be more than enough.
+                    byte[] buf = new byte[68580]; //max tcp packet size, should be more than enough.
 
                     //input stream to receive messages.
                     InputStream input = client.getInputStream();
@@ -90,12 +90,12 @@ public class WebServer extends Networking{
                     HTTPrequestParser(receivedRequest, httpMsg);
 
                     //printing parsed message.
-                    System.out.println("The request line is:\n" + httpMsg.getRequestLine());
-                    System.out.println("The HTTP Method is: \n" + httpMsg.getHttpMethod());
-                    System.out.println("The file wanted is:\n " + httpMsg.getFile());
-                    System.out.println("HTTP version is:\n " + httpMsg.getHttpVersion());
-                    System.out.println("The headers are:\n " + httpMsg.getRequestHeaders().keySet().toString());
-                    System.out.println("The body is:\n" + httpMsg.getRequestBody());
+                    //System.out.println("The request line is:\n" + httpMsg.getRequestLine());
+                    //System.out.println("The HTTP Method is: \n" + httpMsg.getHttpMethod());
+                    //System.out.println("The file wanted is:\n " + httpMsg.getFile());
+                    //System.out.println("HTTP version is:\n " + httpMsg.getHttpVersion());
+                    //System.out.println("The headers are:\n " + httpMsg.getRequestHeaders().toString());
+                    //System.out.println("The body is:\n" + httpMsg.getRequestBody());
 
 
                     byte[] responseMessage = HTTPresponseCreator(httpMsg, httpRsp);
@@ -180,7 +180,13 @@ public class WebServer extends Networking{
                 break;
             case "POST":
                 //TODO: implement this.
-                response = rsp.POSTresponse();
+                try {
+                    response = rsp.POSTresponse(request);
+                } catch (IOException e) {
+                    System.err.println("Could not write POST request body to file.");
+                    response = rsp.ERRORresponse(request,"500");//internal error
+                    e.printStackTrace();
+                }
                 break;
             default:
                 //Respond with an error response.
