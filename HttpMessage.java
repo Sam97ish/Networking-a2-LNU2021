@@ -10,6 +10,11 @@ public class HttpMessage {
     private String HttpVersion;
     private Hashtable<String, String> requestHeaders;
     private String requestBody;
+    private String boundary;
+    private int dataSent;
+    private String finalBoundary;
+    private byte[] finalBoundaryBytes;
+    private byte[] boundaryBytes;
 
 
     public HttpMessage(){
@@ -65,6 +70,46 @@ public class HttpMessage {
         this.requestBody = requestBody;
     }
 
+    public int getDataSent() {
+        return dataSent;
+    }
+
+    public void setDataSent(int dataSent) {
+        this.dataSent = dataSent;
+    }
+
+    public byte[] getBoundaryBytes() {
+        return boundaryBytes;
+    }
+
+    public void setBoundaryBytes(byte[] boundaryBytes) {
+        this.boundaryBytes = boundaryBytes;
+    }
+
+    public String getBoundary() {
+        return boundary;
+    }
+
+    public String getFinalBoundary() {
+        return finalBoundary;
+    }
+
+    public void setFinalBoundary(String finalBoundary) {
+        this.finalBoundary = finalBoundary;
+    }
+
+    public byte[] getFinalBoundaryBytes() {
+        return finalBoundaryBytes;
+    }
+
+    public void setFinalBoundaryBytes(byte[] finalBoundaryBytes) {
+        this.finalBoundaryBytes = finalBoundaryBytes;
+    }
+
+    public void setBoundary(String boundary) {
+        this.boundary = boundary;
+    }
+
     private void appendHeader(String header) throws HttpFormatException {
 
         int index = header.indexOf(":");
@@ -73,7 +118,7 @@ public class HttpMessage {
         }
         //System.out.println(header);
         String headerKey = header.substring(0, index);
-        String headerValue = header.substring(index + 1, header.length());
+        String headerValue = header.substring(index + 1, header.length()).trim();
         //System.out.println(headerKey +", "+ headerValue);
 
         requestHeaders.put(headerKey, headerValue);
@@ -83,6 +128,7 @@ public class HttpMessage {
     }
 
     public void httpParser(String msg) throws IOException, HttpFormatException {
+
         BufferedReader reader = new BufferedReader(new StringReader(msg));
 
         setRequestLine(reader.readLine());
@@ -92,12 +138,28 @@ public class HttpMessage {
         file = requestLine.substring(index+1, indexVersion).trim();
         HttpVersion = requestLine.substring(indexVersion+1,requestLine.length()).trim();
 
+        //extracting headers.
         String header = reader.readLine();
         while (header.length() > 0) {
             appendHeader(header);
             header = reader.readLine();
         }
 
+        if(HttpMethod.equals("POST")){
+            String bound = requestHeaders.get("Content-Type");
+            int firstIndx = bound.indexOf(";");
+            bound = bound.substring(firstIndx+1);
+            int indx = bound.indexOf("=");
+            boundary = bound.substring(indx+1).trim();
+            boundaryBytes = boundary.getBytes();
+            finalBoundary = boundary+"--";
+            finalBoundaryBytes = finalBoundary.getBytes();
+            dataSent = Integer.parseInt(requestHeaders.get("Content-Length"));
+            //System.out.println("Boundary is: " + boundary+" "+ "size of bound " + boundaryBytes.length);
+            //System.out.println("Final boundary is: "+ finalBoundary);
+        }
+
+        /*
         String bodyLine = reader.readLine();
         while (bodyLine != null) {
             appendBody(bodyLine);
@@ -107,7 +169,7 @@ public class HttpMessage {
         if(requestBody!=null){
             requestBody = requestBody.replace("null","");
         }
-
+         */
     }
 
 

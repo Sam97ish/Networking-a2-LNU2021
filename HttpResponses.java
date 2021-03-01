@@ -162,22 +162,22 @@ public class HttpResponses {
         String[] POSTresponseHeaders;
         POSTresponseHeaders = new String[]{"StatusLine", "Date", "Content-Type", "Content-Length", "Last-Modified"};
 
-        String img = request.getRequestBody().substring(request.getRequestBody().indexOf("png")+32);
+        //String img = request.getRequestBody().substring(request.getRequestBody().indexOf("png")+32);
         //System.out.println("img:" + img);
-        byte[] image = img.getBytes();
-        Files.write(new File("image.png").toPath(), image);
+        //byte[] image = img.getBytes();
+        //Files.write(new File("image.png").toPath(), image);
 
 
-        int contentLenght = image.length;
+        int contentLenght = 0; //image.length;
         long lastMod = 0;
         String type = "image/png";
         byte[] head = GETresponseConstructor(POSTresponseHeaders,request,contentLenght,lastMod,type);
 
-        rsp = new byte[head.length+image.length];
+        rsp = new byte[head.length];//+image.length];
 
         ByteBuffer buff = ByteBuffer.wrap(rsp);
 
-        buff.put(head); buff.put(image);
+        buff.put(head); //buff.put(image);
 
         rsp = buff.array();
 

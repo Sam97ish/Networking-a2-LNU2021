@@ -8,11 +8,16 @@ import java.io.*;
 import java.net.*;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.Set;
 
 public class WebServer extends Networking{
     public static String MYDIR;
     public static int MYPORT = 8080;
+    public boolean readyToSend;
 
 
     /**
@@ -22,7 +27,7 @@ public class WebServer extends Networking{
      */
     public WebServer(String ip, int port) {
         super(ip, port);
-
+        readyToSend = false;
     }
 
     /**
@@ -63,6 +68,15 @@ public class WebServer extends Networking{
         private final Socket client;
         public HttpMessage httpMsg; //to store http message components and to parse.
         public HttpResponses httpRsp; //to store response part and construct it.
+        private byte[] data;
+        private int dataReceived;
+        int count = 0;
+        boolean found = false;
+        boolean dataStart = false;
+        int collectIndx = 0;
+        boolean writeFile= false;
+        boolean wrote = false;
+        int foundFirst = 0;
 
         public Handler(Socket c){
             httpMsg = new HttpMessage();
@@ -74,20 +88,207 @@ public class WebServer extends Networking{
         public void run() {
 
             try {
+
+                //input stream to receive messages.
+                InputStream input = client.getInputStream();
+                byte[] receiver = new byte[1000000]; //more than max tcp packet size, should be more than enough.
+
                 while(true) {
 
-                    byte[] buf = new byte[68580]; //max tcp packet size, should be more than enough.
+                    int bytesRead = input.read(receiver);
+                    dataReceived += bytesRead;
 
-                    //input stream to receive messages.
-                    InputStream input = client.getInputStream();
-                    int bytesRead = input.read(buf);
+                    String receivedRequest ="";
 
-                    //string received.
-                    String receivedRequest = new String(buf,0,bytesRead);
+                    ArrayList<Byte> byteArrayList = new ArrayList<>();
+
+                    for (byte b : receiver) {
+                        byteArrayList.add(b);
+                    }
+
+                    while(input.available()>0) {
+
+                        bytesRead = input.read(receiver);
+
+                        for (byte b : receiver) {
+                            byteArrayList.add(b);
+                        }
+                    }
+
+                    byte[] buf = new byte[byteArrayList.size()];
+
+                    for(int i = 0; i < byteArrayList.size(); i++) {
+                        buf[i] = byteArrayList.get(i);
+                    }
+
+                    if(bytesRead != -1){
+                        //string received.
+                        receivedRequest = new String(buf,0,bytesRead);
+                    }
+
+                    //System.out.println(bytesRead);
+                    if(receivedRequest.contains("GET") || receivedRequest.contains("POST")){//new request, must parse headers.
+                        //System.out.println("parsed");
+                        HTTPrequestParser(receivedRequest, httpMsg);
+                    }
+
+                    if(httpMsg.getHttpMethod().equals("POST")){
+
+                        if(data == null) {
+                            data = new byte[buf.length];
+                        }
+                        byte[] boundary = httpMsg.getBoundaryBytes();
+
+
+                        while (count<bytesRead){
+
+                            //first char of boundary is matching
+                            if(buf[count] == boundary[0] && !found){
+                                //check the rest of them.
+                                int boundcount = 0;
+                                int bufcount = count;
+
+                                while(boundcount < boundary.length && boundary[boundcount] == buf[bufcount]){
+                                    boundcount++;
+                                    bufcount++;
+                                }
+
+                                if(boundcount >= boundary.length){
+                                    //System.out.println("Found first boundary");
+                                    count = bufcount;
+
+                                    if(foundFirst>=1) {
+                                        System.out.println("Found the right boundary.");
+                                        //foundFirst=0;
+                                        found = true;
+                                    }
+                                    foundFirst++;
+                                }
+                            }
+
+                            if(found && !dataStart){
+                                //System.out.println("First boundary found, now looking for CRLF");
+                                String crlf = "\r\n\r\n";
+                                byte[] newline = crlf.getBytes();
+
+                                if(buf[count] == newline[0]){
+                                    //first one found, look for the rest.
+                                    int linecount = 0;
+                                    int buflinecount=count;
+
+                                    while(linecount < newline.length && newline[linecount] == buf[buflinecount]){
+                                        linecount++;
+                                        buflinecount++;
+                                    }
+
+                                    if(linecount >= newline.length){
+                                        System.out.println("Found new line after the boundary, data should start after");
+                                        count = buflinecount;
+                                        dataStart = true;
+
+                                    }
+
+                                }
+                            }
+
+                            if(dataStart && !writeFile){
+                                //time to extract this bs.
+                                int countdata = count;
+                                boolean saveData = true;
+                                byte[] finalBound = httpMsg.getFinalBoundaryBytes();
+                                while (countdata<bytesRead){
+                                    if(buf[countdata] == finalBound[0]){
+                                        //check if we arrived at the end.
+
+                                        int endBoundcount = 0;
+                                        int bufEndcount = countdata;
+
+                                        while(endBoundcount < finalBound.length && finalBound[endBoundcount] == buf[bufEndcount]){
+                                            endBoundcount++;
+                                            bufEndcount++;
+                                        }
+
+                                        if(endBoundcount >= finalBound.length){
+                                            System.out.println("Found boundary end, time to rap this up");
+                                            count = bufEndcount;
+                                            countdata = bufEndcount;
+                                            saveData = false;
+                                            writeFile = true;
+                                        }
+                                    }
+
+                                    if(saveData){
+                                        //collect data.
+                                        data[collectIndx]=buf[countdata];
+
+                                        collectIndx++;
+
+                                    }
+                                    countdata++;
+                                }
+                                count = countdata;
+                            }
+                            if(writeFile){
+                                /*
+                                String test = new String(data,0,data.length);
+                                File here = new File("");
+                                File f = new File(here.getAbsolutePath()+"/test.txt");
+                                FileWriter w = new FileWriter(here.getAbsolutePath() + "/test.txt");
+                                w.write(test);
+                                w.close();
+                                 */
+                                System.out.println("Writing the file");
+                                if(wrote) {
+                                    Files.write(Path.of("image.png"), data, StandardOpenOption.APPEND);
+                                }else{
+                                    Files.write(Path.of("image.png"), data, StandardOpenOption.CREATE);
+                                    wrote = true;
+                                }
+                                //Files.write(new File("image.png").toPath(), data);
+
+                            }
+                            count++;
+                            //bytesRead = input.read(buf);
+                        }
+                        /*
+                        //extract data.
+                        char[] seenChars = new char[4];
+                        int count = 0;
+                        do{
+                            for(int i = 0; i<buf.length;i++){
+                                byte ch = buf[i];
+                                char letter = (char) ch;
+                                seenChars[i%4] = letter;
+                                System.out.println("Looking for CRLF, The letter is: " + letter);
+
+                                if(seenChars[0] == 'C' && seenChars[1]== 'R' && seenChars[2]== 'L' && seenChars[3]== 'F'){
+                                    count = count+1;
+                                    System.out.println("FOUND CRLF");
+                                }
+
+                            }
+                        }while(input.available()!=0);
+
+                        System.out.println("Counter of CRLF: " + count);
+
+                         */
+
+                    }
+
+                    byte[] responseMessage = HTTPresponseCreator(httpMsg, httpRsp);
+                    if(readyToSend){
+
+                        //Sending response.
+                        if((!client.isClosed()) && responseMessage.length>0 && input.available()==0) {
+                            System.out.println("Sending response dataReceive: "+dataReceived);
+                            OutputStream output = client.getOutputStream();
+                            output.write(responseMessage, 0, responseMessage.length);
+                            output.flush();
+                            readyToSend = false;
+                        }
+                    }
 
                     //System.out.println("The full received request is: \n" + receivedRequest);
-
-                    HTTPrequestParser(receivedRequest, httpMsg);
 
                     //printing parsed message.
                     //System.out.println("The request line is:\n" + httpMsg.getRequestLine());
@@ -98,22 +299,13 @@ public class WebServer extends Networking{
                     //System.out.println("The body is:\n" + httpMsg.getRequestBody());
 
 
-                    byte[] responseMessage = HTTPresponseCreator(httpMsg, httpRsp);
 
-
-                    //Sending received message
-                    OutputStream output = client.getOutputStream();
-                    output.write(responseMessage,0,responseMessage.length);
-                    output.flush();
-
-                    //System.out.printf("TCP echo request from %s", client.getInetAddress().getHostAddress());
-                    //System.out.printf(" using port %d\n", client.getPort());
 
                 }
             } catch (IOException e) {
                 System.err.println("Could not send or receive data, check IP and port " );
                 e.printStackTrace();
-                System.exit(3);
+                //System.exit(3);
             }catch(Exception e){
                 System.err.println("Connection was lost");
                 e.printStackTrace();
@@ -133,6 +325,11 @@ public class WebServer extends Networking{
 
         MYPORT = Integer.valueOf(args[0]);
         MYDIR = args[1];
+        File dirCheck = new File("."+MYDIR);
+        if(!dirCheck.isDirectory()){
+            System.err.println("Something is wrong with your directory " + MYDIR);
+            System.exit(20);
+        }
 
 
         WebServer server = null;
@@ -194,6 +391,7 @@ public class WebServer extends Networking{
                 break;
         }
 
+        readyToSend = true;
         return response;
     }
 }
