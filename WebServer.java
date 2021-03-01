@@ -347,6 +347,11 @@ public class WebServer extends Networking{
 
     }
 
+    /**
+     * @role: calls the appropriate methods to parse the request.
+     * @param receivedRequest: the request received.
+     * @param msg: the class that will store the parsed information.
+     */
     public void HTTPrequestParser(String receivedRequest, HttpMessage msg){
 
         try {
@@ -360,6 +365,12 @@ public class WebServer extends Networking{
         }
     }
 
+    /**
+     * @role: calls the appropriate methods to create a response to the request.
+     * @param request: the parsed request.
+     * @param rsp: the response in byte[].
+     * @return byte[] array of the response.
+     */
     public byte[] HTTPresponseCreator(HttpMessage request, HttpResponses rsp){
         //WARNING, HTTPrequestParser must have been executed before this.
 

@@ -21,7 +21,7 @@ public class HttpMessage {
         requestHeaders = new Hashtable<>();
     }
 
-
+    //Setters and getters.
     public String getRequestLine() {
         return requestLine;
     }
@@ -110,6 +110,11 @@ public class HttpMessage {
         this.boundary = boundary;
     }
 
+    /**
+     * @role: adds the header to the hashtable of headers.
+     * @param header: the header.
+     * @throws HttpFormatException
+     */
     private void appendHeader(String header) throws HttpFormatException {
 
         int index = header.indexOf(":");
@@ -123,10 +128,21 @@ public class HttpMessage {
 
         requestHeaders.put(headerKey, headerValue);
     }
+
+    /**
+     * Addes the body to the body string if the body is a string.
+     * @param bodyln: the body content.
+     */
     private void appendBody(String bodyln){
         requestBody = requestBody + bodyln + "\r\n";
     }
 
+    /**
+     * @role: parses the incoming request and separates all the relevent information.
+     * @param msg: the request.
+     * @throws IOException
+     * @throws HttpFormatException
+     */
     public void httpParser(String msg) throws IOException, HttpFormatException {
 
         BufferedReader reader = new BufferedReader(new StringReader(msg));
@@ -173,6 +189,9 @@ public class HttpMessage {
     }
 
 
+    /**
+     * @role: a custom exception to handle the http format errors.
+     */
     public static class HttpFormatException extends Exception {
 
         public HttpFormatException(String message) {

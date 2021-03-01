@@ -24,6 +24,15 @@ public class HttpResponses {
         forbidden = forbiddenList;
     }
 
+    /**
+     * @role: constructs and returns the GET response.
+     * @param headers: to be used.
+     * @param request: the parsed request.
+     * @param conLength: the length of the resource.
+     * @param lastMod: last modification.
+     * @param type: the http type of the resource.
+     * @return byte[] array of the response.
+     */
     private byte[] GETresponseConstructor(String[] headers, HttpMessage request, int conLength, long lastMod, String type){
 
         //first status line.
@@ -63,7 +72,13 @@ public class HttpResponses {
         return rsp.getBytes();
     }
 
-
+    /**
+     * @role: decides the resource and constructs the response according to it.
+     * @param request: the parsed request.
+     * @param defaultDir: the default dir of the server.
+     * @return byte[] array of the response.
+     * @throws IOException
+     */
     public byte[] GETresponse(HttpMessage request, String defaultDir) throws IOException {
 
         File here = new File("");
@@ -75,9 +90,11 @@ public class HttpResponses {
         //Checking if any directory is specified.
 
 
-        int startDir = request.getFile().indexOf("/",1);
-        if(startDir == -1 && request.getFile().contains("hello.html")){//If they're looking for a redirected file.
-            return ERRORresponse(request,"302"); //redirecting to the file.
+        int startDir = request.getFile().indexOf("/", 1);
+        if (startDir == -1 && request.getFile().contains("hello.html")) {//If they're looking for a redirected file.
+            return ERRORresponse(request, "302"); //redirecting to the file.
+        }else if(startDir == -1 && request.getFile().contains("confidential.html")){
+            return ERRORresponse(request, "500");
         }else {
             request.setFile(defaultDir+request.getFile());
         }
@@ -156,18 +173,47 @@ public class HttpResponses {
         return rsp;
     }
 
+    /**
+     * @role: creates the response for the POST request.
+     * @param request: the parsed request.
+     * @return byte[] array of the response.
+     * @throws IOException
+     */
     public  byte[] POSTresponse(HttpMessage request) throws IOException {
         //TODO: construct response here.
         byte[] rsp = new byte[0];
         String[] POSTresponseHeaders;
         POSTresponseHeaders = new String[]{"StatusLine", "Date", "Content-Type", "Content-Length", "Last-Modified"};
 
+        File page = new File("./public/thanks.html");
+        Scanner scan = new Scanner(page);
+        String type = "text/html";
+        String contents="";
+
+        while(scan.hasNextLine()){
+            contents = contents + scan.nextLine() + "\r\n";
+        }
+
+        scan.close();
+        long lastMod = page.lastModified();
+        int contentLenght = contents.getBytes().length;
+
+        byte[] head = GETresponseConstructor(POSTresponseHeaders,request,contentLenght,lastMod,type);
+        byte[] body = contents.getBytes();
+
+        rsp = new byte[head.length+body.length];
+
+        ByteBuffer buff = ByteBuffer.wrap(rsp);
+
+        buff.put(head); buff.put(body);
+
+        rsp = buff.array();
         //String img = request.getRequestBody().substring(request.getRequestBody().indexOf("png")+32);
         //System.out.println("img:" + img);
         //byte[] image = img.getBytes();
         //Files.write(new File("image.png").toPath(), image);
 
-
+        /*
         int contentLenght = 0; //image.length;
         long lastMod = 0;
         String type = "image/png";
@@ -180,7 +226,7 @@ public class HttpResponses {
         buff.put(head); //buff.put(image);
 
         rsp = buff.array();
-
+        */
         /*
         String imgHeader= request.getRequestHeaders().get("Content-Type");
         int endIndex=imgHeader.indexOf(";");
@@ -227,6 +273,16 @@ public class HttpResponses {
         return rsp;
     }
 
+    /**
+     * @role: constucts the error response.
+     * @param headers: the headers included in the error response.
+     * @param request: the parsed request.
+     * @param conLength: the content length.
+     * @param lastMod: last modification.
+     * @param type: the content type.
+     * @param errorCode: the error code provided.
+     * @return byte[] array of the response.
+     */
     private byte[] ErrorConstructor(String[] headers, HttpMessage request, int conLength, long lastMod, String type, String errorCode){
 
         //first status line.
@@ -272,6 +328,12 @@ public class HttpResponses {
         return rsp.getBytes();
     }
 
+    /**
+     * @role: decides which error to produce and creates it.
+     * @param request: the parsed request.
+     * @param errorCode: the error code provided.
+     * @return byte[] array of the response.
+     */
     public byte[] ERRORresponse(HttpMessage request, String errorCode){
         String[] errorHeaders;
         errorHeaders = new String[]{"StatusLine", "Date", "Content-Type", "Content-Length", "Last-Modified"};
